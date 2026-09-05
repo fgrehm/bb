@@ -72,7 +72,6 @@ bb skill list --environment "$BB_ENVIRONMENT_ID" --json
 Confirm the command result and any affected thread, environment, plugin, or
 remote service. Report the stable ID or URL that the user needs next.
 
-
 ## Plugin configuration
 
 Use `bb plugin config <id>` to inspect the plugin’s configuration and
@@ -84,3 +83,7 @@ Discover contributed command paths through `bb plugin list`, the generated
 Keep this skill and its references focused on core BB commands. Plugin-specific
 behavior belongs in the owning plugin’s `skills/` directory, including built-in
 plugins; do not add plugin command manuals here.
+
+## Built-in browser control
+
+Use `bb browser instances --host <host-id> --json` to discover a desktop. Commands `tabs`, `create`, `acquire`, `connection`, `release`, `reveal`, `capture`, `close`, and `watch` require explicit `--host`, `--instance`, `--generation`, and `--thread`. See `bb guide browser` and `bb browser --help` for flags. New tabs use separate automation profiles; personal-tab control needs an explicit handoff. Connection credentials are written with `connection --output <new-file>` and work only on the browser host; keep them out of chat and public port shares.
