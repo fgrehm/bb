@@ -19,5 +19,5 @@
     },
     "types": ["node"]
   },
-  "include": ["server.ts", "src", "app.tsx", "vitest.config.ts"]
+  "include": ["server.ts", "src", "app.tsx", "app.test.tsx", "vitest.config.ts"]
 }
