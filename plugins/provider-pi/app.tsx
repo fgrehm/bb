@@ -22,9 +22,11 @@ interface ParsedRequest {
 
 function parseRequest(payload: unknown): ParsedRequest | null {
   if (typeof payload !== "object" || payload === null) return null;
+  const direct = piExtensionUiPayloadDataSchema.safeParse(payload);
+  if (direct.success) return direct.data;
   const data = (payload as { data?: unknown }).data;
-  const parsed = piExtensionUiPayloadDataSchema.safeParse(data);
-  return parsed.success ? parsed.data : null;
+  const wrapped = piExtensionUiPayloadDataSchema.safeParse(data);
+  return wrapped.success ? wrapped.data : null;
 }
 
 function ExtensionUiInteraction({

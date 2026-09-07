@@ -14,13 +14,14 @@ function render(
     submit?: (value: unknown) => Promise<void>;
     cancel?: () => Promise<void>;
   } = {},
+  payload: unknown = data,
 ) {
   return renderSlot(app.pendingInteractions[0]!, {
     interaction: {
       id: "pint_test",
       threadId: "thr_test",
       title: "Allow access?",
-      payload: { kind: PI_EXTENSION_UI_KIND, title: "Allow access?", data } as never,
+      payload: payload as never,
       createdAt: 0,
       expiresAt: null,
     },
@@ -88,6 +89,33 @@ describe("pi extension ui interaction", () => {
     await vi.waitFor(() =>
       expect(submit).toHaveBeenCalledWith("line one\nline two"),
     );
+  });
+
+  it("renders the unwrapped payload the host passes to plugin components", async () => {
+    const submit = vi.fn(async () => undefined);
+    const view = render(
+      { requestId: "ui-1", method: "select", options: ["Allow once", "Keep blocked"] },
+      { submit },
+    );
+    fireEvent.click(view.getByText("Allow once"));
+    fireEvent.click(view.getByText("Submit"));
+    await vi.waitFor(() => expect(submit).toHaveBeenCalledWith("Allow once"));
+  });
+
+  it("still renders the wrapped stored-payload shape for robustness", async () => {
+    const submit = vi.fn(async () => undefined);
+    const view = render(
+      undefined,
+      { submit },
+      {
+        kind: PI_EXTENSION_UI_KIND,
+        title: "Allow access?",
+        data: { requestId: "ui-1", method: "select", options: ["A"] },
+      },
+    );
+    fireEvent.click(view.getByText("A"));
+    fireEvent.click(view.getByText("Submit"));
+    await vi.waitFor(() => expect(submit).toHaveBeenCalledWith("A"));
   });
 
   it("offers cancel for an unrenderable payload", async () => {
