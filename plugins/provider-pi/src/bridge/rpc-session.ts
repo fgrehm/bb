@@ -25,7 +25,6 @@ export interface PiRpcSessionOptions {
   extensionPath: string;
   recordThreadId: string;
   noSession?: boolean;
-  onExtensionUiRequest?: (request: Record<string, unknown>) => void;
 }
 
 export interface DynamicToolDefinition {
@@ -164,13 +163,6 @@ export class PiRpcSession {
     return this.isCompacting;
   }
 
-  respondToExtensionUi(
-    id: string | number,
-    fields: Record<string, unknown>,
-  ): void {
-    this.child?.respondToExtensionUi(id, fields);
-  }
-
   getLiveModel(): PiRpcSessionState["model"] | undefined {
     return this.liveModel;
   }
@@ -256,9 +248,6 @@ export class PiRpcSession {
         if (child === this.child) this.handleExit(info);
       },
       recordThreadId: this.options.recordThreadId,
-      onExtensionUiRequest: (request) => {
-        if (child === this.child) this.options.onExtensionUiRequest?.(request);
-      },
     });
     this.child = child;
 

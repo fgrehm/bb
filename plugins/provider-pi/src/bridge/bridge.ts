@@ -52,11 +52,6 @@ import {
 } from "../session-params.js";
 import { BB_PI_EXTENSION_SOURCE } from "./bb-pi-extension.js";
 import {
-  createExtensionUiCoordinator,
-  type ExtensionUiCoordinator,
-} from "./extension-ui.js";
-import { type InteractionUiRequest } from "../extension-ui-contract.js";
-import {
   getPiInstallGate,
   getPiProviderInstallationRun,
   getPiProviderInstallationStatus,
@@ -205,17 +200,13 @@ let sessionSerialCounter = 0;
 const THREAD_STOP_CLOSE_TIMEOUT_MS = 8_000;
 
 const { send, sendResult, sendError } = createBridgeIo<
-  BridgeEventNotification | BridgeToolCallRequest | InteractionUiRequest
+  BridgeEventNotification | BridgeToolCallRequest
 >();
 
 const sessions = new Map<string, ThreadSession>();
 const closingSessions = new Map<string, Promise<string | undefined>>();
 const { forwardToolCall, handleToolCallResponse, resolvePendingToolCalls } =
   createPendingToolCallTracker({ sendToolCall: send });
-
-const extensionUi: ExtensionUiCoordinator = createExtensionUiCoordinator({
-  sendInteractionRequest: send,
-});
 
 let configuredSkillPaths: string[] | null = null;
 
@@ -283,7 +274,6 @@ async function closeThreadSession(args: {
   }
   threadSession.closing = true;
   resolvePendingToolCalls(threadSession, args.message);
-  extensionUi.cancelPendingForScope(threadSession);
   const closePromise = Promise.resolve()
     .then(() =>
       threadSession.session.closeGracefully(THREAD_STOP_CLOSE_TIMEOUT_MS),
@@ -426,23 +416,6 @@ function createOnPiEvent(
     if (event.type === "turn_end" || event.type === "compaction_end") {
       emitContextWindowUsage(args.threadId);
     }
-  };
-}
-
-function createOnExtensionUiRequest(
-  args: CurrentThreadSessionArgs,
-): (request: Record<string, unknown>) => void {
-  return (request) => {
-    const threadSession = getCurrentThreadSession(args);
-    if (!threadSession || threadSession.closing) return;
-    extensionUi.handle({
-      scope: threadSession,
-      request,
-      threadId: args.threadId,
-      providerThreadId: threadSession.providerThreadId,
-      respond: (requestId, fields) =>
-        threadSession.session.respondToExtensionUi(requestId, fields),
-    });
   };
 }
 
@@ -730,7 +703,6 @@ async function buildSessionOptions(args: {
   params: PiSessionParams;
   providerThreadId: string;
   threadId: string;
-  sessionSerial: number;
 }): Promise<PiRpcSessionOptions> {
   return {
     cwd: args.params.cwd,
@@ -757,10 +729,6 @@ async function buildSessionOptions(args: {
     scratchDir: requireScratchDir(),
     extensionPath: requireExtensionPath(),
     recordThreadId: args.threadId,
-    onExtensionUiRequest: createOnExtensionUiRequest({
-      sessionSerial: args.sessionSerial,
-      threadId: args.threadId,
-    }),
   };
 }
 
@@ -774,7 +742,6 @@ async function constructPiThreadSession(
     params,
     providerThreadId,
     threadId,
-    sessionSerial,
   });
   const session = new PiRpcSession(
     sessionOptions,
@@ -839,7 +806,6 @@ function retireReplacedPiChild(replaced: ThreadSession): void {
     replaced,
     "Pi thread session replaced while tool call was pending",
   );
-  extensionUi.cancelPendingForScope(replaced);
   void replaced.session
     .closeGracefully(THREAD_STOP_CLOSE_TIMEOUT_MS)
     .catch(() => undefined);
@@ -1232,13 +1198,8 @@ function extractInput(input: TurnStartParams["input"]): ExtractedInput {
 
 function handleParsedMessage(parsed: unknown): void {
   const response = decodeBridgeJsonRpcResponse(parsed);
-  if (response) {
-    if (extensionUi.handleRuntimeResponse(response)) {
-      return;
-    }
-    if (handleToolCallResponse(response)) {
-      return;
-    }
+  if (response && handleToolCallResponse(response)) {
+    return;
   }
   const decoded = decodePiJsonRpcRequest(parsed);
   if (decoded.kind === "ignored") {
