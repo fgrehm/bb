@@ -5,7 +5,6 @@ import {
   piExtensionUiResolutionSchema,
   resolveExtensionUiResponseFields,
   type InteractionUiRequest,
-  type PiExtensionUiMethod,
   type PiExtensionUiRequest,
   type PiExtensionUiResponseFields,
   type RuntimeInteractionUiResponse,
@@ -21,8 +20,7 @@ const FIRE_AND_FORGET_METHODS = new Set([
 
 interface PendingExtensionUiRequest {
   scope: object;
-  method: PiExtensionUiMethod;
-  piRequestId: string | number;
+  request: PiExtensionUiRequest;
   respond: (
     requestId: string | number,
     fields: PiExtensionUiResponseFields,
@@ -93,8 +91,7 @@ export function createExtensionUiCoordinator(
       const interactionId = `pi-ui-${nextRequestId}`;
       pending.set(interactionId, {
         scope: args.scope,
-        method: request.method,
-        piRequestId: request.id,
+        request,
         respond: args.respond,
       });
       try {
@@ -127,9 +124,9 @@ export function createExtensionUiCoordinator(
       pending.delete(String(response.id));
       const parsed = piExtensionUiResolutionSchema.safeParse(response.result);
       entry.respond(
-        entry.piRequestId,
+        entry.request.id,
         parsed.success
-          ? resolveExtensionUiResponseFields(entry.method, parsed.data)
+          ? resolveExtensionUiResponseFields(entry.request, parsed.data)
           : { cancelled: true },
       );
       return true;
@@ -141,7 +138,7 @@ export function createExtensionUiCoordinator(
           continue;
         }
         pending.delete(interactionId);
-        entry.respond(entry.piRequestId, { cancelled: true });
+        entry.respond(entry.request.id, { cancelled: true });
       }
     },
   };

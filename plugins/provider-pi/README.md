@@ -23,7 +23,9 @@ What lives here:
   Fire-and-forget requests (`notify`, `setStatus`, `setWidget`, `setTitle`,
   `set_editor_text`) are accepted and dropped. A dialog left pending when the
   session closes is answered cancelled. Requests that fail validation are
-  answered cancelled, never forwarded.
+  answered cancelled, never forwarded. Select answers must match an offered
+  option. Helper sessions without a dialog handler automatically cancel dialogs
+  so extensions cannot block helper startup waiting for user input.
 
 ## Skills
 

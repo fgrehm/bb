@@ -87,21 +87,20 @@ export type RuntimeInteractionUiResponse = {
 };
 
 export function resolveExtensionUiResponseFields(
-  method: PiExtensionUiMethod,
-  result: unknown,
+  request: PiExtensionUiRequest,
+  result: PiExtensionUiResolution,
 ): PiExtensionUiResponseFields {
-  if (
-    typeof result !== "object" ||
-    result === null ||
-    (result as { kind?: unknown }).kind !== "request_answer"
-  ) {
-    return { cancelled: true };
-  }
-  const value = (result as { value?: unknown }).value;
-  if (method === "confirm") {
+  const { value } = result;
+  if (request.method === "confirm") {
     return typeof value === "boolean"
       ? { confirmed: value }
       : { cancelled: true };
   }
-  return typeof value === "string" ? { value } : { cancelled: true };
+  if (typeof value !== "string") {
+    return { cancelled: true };
+  }
+  if (request.method === "select" && !request.options?.includes(value)) {
+    return { cancelled: true };
+  }
+  return { value };
 }

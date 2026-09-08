@@ -238,6 +238,7 @@ export class PiRpcSession {
     }
 
     this.ready = createDeferred();
+    const onExtensionUiRequest = this.options.onExtensionUiRequest;
     const child = new PiRpcChild({
       cwd: this.options.cwd,
       env: buildPiChildEnv({
@@ -256,9 +257,11 @@ export class PiRpcSession {
         if (child === this.child) this.handleExit(info);
       },
       recordThreadId: this.options.recordThreadId,
-      onExtensionUiRequest: (request) => {
-        if (child === this.child) this.options.onExtensionUiRequest?.(request);
-      },
+      onExtensionUiRequest: onExtensionUiRequest
+        ? (request) => {
+            if (child === this.child) onExtensionUiRequest(request);
+          }
+        : undefined,
     });
     this.child = child;
 

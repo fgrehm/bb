@@ -128,17 +128,21 @@ it("maps a boolean answer to confirmed for a confirm dialog", async () => {
   expect(await extensionUiReplyOf(threadId)).toContain('"confirmed":true');
 }, 90_000);
 
-it("answers a select with a value the user never chose as cancelled", async () => {
-  const threadId = "thr_ui_badvalue";
-  await harness.startThread(threadId);
-  turnStart(
-    threadId,
-    '/ui {"method":"select","title":"Pick","options":["A","B"]}',
-  );
-  const interaction = await waitForInteractionRequest(threadId);
-  resolveInteraction(interaction.id, { kind: "request_answer", value: 42 });
-  expect(await extensionUiReplyOf(threadId)).toContain('"cancelled":true');
-}, 90_000);
+it.each([42, "not-an-option"])(
+  "answers an invalid select value %j as cancelled",
+  async (value) => {
+    const threadId = "thr_ui_badvalue";
+    await harness.startThread(threadId);
+    turnStart(
+      threadId,
+      '/ui {"method":"select","title":"Pick","options":["A","B"]}',
+    );
+    const interaction = await waitForInteractionRequest(threadId);
+    resolveInteraction(interaction.id, { kind: "request_answer", value });
+    expect(await extensionUiReplyOf(threadId)).toContain('"cancelled":true');
+  },
+  90_000,
+);
 
 it("answers an interaction error as cancelled", async () => {
   const threadId = "thr_ui_error";
